@@ -95,12 +95,21 @@ def build_kmer_dict(fastq_file, kmer_size):
 def build_graph(kmer_dict):
     Graph = nx.DiGraph()
     for key in kmer_dict:
-        Graph.add_edge(key[:-1], key[1:], weight=kmer_dict[key])
+        Graph.add_edge(key[:-1], key[1:], weight = kmer_dict[key])
     return Graph
 
 
 def remove_paths(graph, path_list, delete_entry_node, delete_sink_node):
-    pass
+    for path in path_list:
+        if delete_entry_node and not delete_sink_node:
+            graph.remove_nodes_from(path[:-1])
+        if delete_sink_node and not delete_entry_node:
+            graph.remove_nodes_from(path[1:])
+        if delete_entry_node and delete_sink_node: 
+            graph.remove_nodes_from(path)
+        if not delete_entry_node and not delete_sink_node:
+            graph.remove_nodes_from(path[1:-1])  
+    return graph
 
 def std(data):
     pass
@@ -108,13 +117,31 @@ def std(data):
 
 def select_best_path(graph, path_list, path_length, weight_avg_list, 
                      delete_entry_node=False, delete_sink_node=False):
-    pass
+    if statistics.stdev(weight_avg_list) != 0 :
+        path_to_keep = weight_avg_list.index(max(weight_avg_list))
+    
+    elif statistics.stdev(path_length) != 0 :
+        path_to_keep = path_length.index(max(path_length))
+    
+    else : 
+        path_to_keep = randint(0, len(path_list))
+    
+    path_list.pop(path_to_keep)
+
+    G = remove_paths(graph, path_list, delete_entry_node, delete_sink_node)
+
+    return G
+
 
 def path_average_weight(graph, path):
-    pass
+    return(statistics.mean([d["weight"] for (u, v, d) in graph.subgraph(path).edges(data=True)]))
 
 def solve_bubble(graph, ancestor_node, descendant_node):
-    pass
+    paths = nx.all_simple_paths(graph, ancestor_node, descendant_node)
+    weight_avg_list = map(path_average_weight, paths)
+    path_length = map(len, paths)
+    return select_best_path(graph, paths, path_length, weight_avg_list)
+    # map(lambda x : fun(x), paths)
 
 def simplify_bubbles(graph):
     pass
