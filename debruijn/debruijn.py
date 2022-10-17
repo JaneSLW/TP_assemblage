@@ -70,19 +70,32 @@ def get_arguments():
 
 
 def read_fastq(fastq_file):
-    pass
-
+    with open(fastq_file, 'r') as f:
+        for i in f:
+            yield next(f).strip()
+            next(f)
+            next(f)
 
 def cut_kmer(read, kmer_size):
-    pass
-
+    for i in range(len(read)):
+        if i + kmer_size <= len(read): 
+            yield read[i : i + kmer_size] 
 
 def build_kmer_dict(fastq_file, kmer_size):
-    pass
+    kmer_occ = {}
+    for seq in read_fastq(fastq_file):
+        for kmer in cut_kmer(seq, kmer_size):
+            if kmer in kmer_occ: 
+                kmer_occ[kmer] += 1
+            else:
+                kmer_occ[kmer] = kmer_occ.get(kmer, 0) + 1
+    return kmer_occ
 
 
 def build_graph(kmer_dict):
-    pass
+    Graph = nx.DiGraph()
+    for key in kmer_dict:
+        Graph.add_edge(key[:-1], key[1:], weight=kmer_dict[key] )
 
 
 def remove_paths(graph, path_list, delete_entry_node, delete_sink_node):
