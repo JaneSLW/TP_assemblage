@@ -95,7 +95,8 @@ def build_kmer_dict(fastq_file, kmer_size):
 def build_graph(kmer_dict):
     Graph = nx.DiGraph()
     for key in kmer_dict:
-        Graph.add_edge(key[:-1], key[1:], weight=kmer_dict[key] )
+        Graph.add_edge(key[:-1], key[1:], weight=kmer_dict[key])
+    return Graph
 
 
 def remove_paths(graph, path_list, delete_entry_node, delete_sink_node):
@@ -125,16 +126,37 @@ def solve_out_tips(graph, ending_nodes):
     pass
 
 def get_starting_nodes(graph):
-    pass
+    node_start = []
+    for node in graph.nodes():
+        if  not list(graph.predecessors(node)):
+            node_start.append(node)
+    return(node_start)
 
 def get_sink_nodes(graph):
-    pass
+    node_end = []
+    for node in graph.nodes():
+        if not list(graph.successors(node)):
+            node_end.append(node)
+    return(node_end)
 
 def get_contigs(graph, starting_nodes, ending_nodes):
-    pass
+    all_paths = []
+    for start in starting_nodes:
+        for end in ending_nodes:
+            if list(nx.all_simple_paths(graph, start, end)): 
+                for path in list(nx.all_simple_paths(graph, start, end)):
+                    contig = path[0]
+                    for node in range(1, len(path)):
+                       contig = contig + path[node][1]
+                    all_paths.append((contig, len(contig)))
+    return(all_paths)
+
 
 def save_contigs(contigs_list, output_file):
-    pass
+    with open(output_file, "w") as filout:
+        for i, contig in enumerate(contigs_list):
+            filout.write(f">contig_{i} len={contig[1]}\n")
+            filout.write(f"{fill(contig[0])}\n")
 
 
 def fill(text, width=80):
