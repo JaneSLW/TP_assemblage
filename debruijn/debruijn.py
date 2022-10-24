@@ -175,11 +175,22 @@ def solve_entry_tips(graph, starting_nodes):
                     path_len.append(len(path))
                     path_weight.append(path_average_weight(graph, path))
     graphe = select_best_path(graph, path_l, path_len, path_weight, True, False)
-
     return graphe
 
 def solve_out_tips(graph, ending_nodes):
-    pass
+    path_l = []
+    path_len = []
+    path_weight = []
+    for node in ending_nodes:
+        for pre_node in nx.ancestors(graph, node):
+            des_node = list(graph.successors(pre_node))
+            if len(des_node) >= 2:
+                for path in nx.all_simple_paths(graph, pre_node, node):
+                    path_l.append(path)
+                    path_len.append(len(path))
+                    path_weight.append(path_average_weight(graph, path))
+    graphe = select_best_path(graph, path_l, path_len, path_weight, False, True)
+    return graphe
 
 def get_starting_nodes(graph):
     node_start = []
