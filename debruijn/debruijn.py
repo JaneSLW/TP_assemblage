@@ -10,6 +10,7 @@
 #    GNU General Public License for more details.
 #    A copy of the GNU General Public License is available at
 #    http://www.gnu.org/licenses/gpl-3.0.html
+#    python /debruijn/debruijn.py -i /data/eva71_hundred_reads.fq
 
 """Perform assembly based on debruijn graph."""
 
@@ -26,13 +27,13 @@ import statistics
 import matplotlib.pyplot as plt
 matplotlib.use("Agg")
 
-__author__ = "Your Name"
-__copyright__ = "Universite Paris Diderot"
-__credits__ = ["Your Name"]
+__author__ = "Jane Schadtler-Law"
+__copyright__ = "Universite Paris Cité"
+__credits__ = ["Jane Schadtler-Law"]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Your Name"
-__email__ = "your@email.fr"
+__maintainer__ = "Jane Schadtler-Law"
+__email__ = "jane.schadtler-law@etu.u-paris.fr"
 __status__ = "Developpement"
 
 def isfile(path):
@@ -112,7 +113,7 @@ def remove_paths(graph, path_list, delete_entry_node, delete_sink_node):
     return graph
 
 def std(data):
-    pass
+    return statistics.stdev(data)
 
 
 def select_best_path(graph, path_list, path_length, weight_avg_list, 
@@ -126,28 +127,56 @@ def select_best_path(graph, path_list, path_length, weight_avg_list,
     else : 
         path_to_keep = randint(0, len(path_list))
     
-    path_list.pop(path_to_keep)
+    path_l = list(path_list)
+    path_l.pop(path_to_keep)
 
-    G = remove_paths(graph, path_list, delete_entry_node, delete_sink_node)
+    G = remove_paths(graph, path_l, delete_entry_node, delete_sink_node)
 
     return G
-
 
 def path_average_weight(graph, path):
     return(statistics.mean([d["weight"] for (u, v, d) in graph.subgraph(path).edges(data=True)]))
 
 def solve_bubble(graph, ancestor_node, descendant_node):
-    paths = nx.all_simple_paths(graph, ancestor_node, descendant_node)
-    weight_avg_list = map(path_average_weight, paths)
-    path_length = map(len, paths)
+    paths = list(nx.all_simple_paths(graph, ancestor_node, descendant_node))
+    weight_avg_list = [path_average_weight(graph, i) for i in paths]
+    path_length = [len(i) for i in paths]
     return select_best_path(graph, paths, path_length, weight_avg_list)
     # map(lambda x : fun(x), paths)
 
+from itertools import combinations
+
 def simplify_bubbles(graph):
-    pass
+    bubble = False 
+    for node in graph.nodes():
+        list_predecessors = list(graph.predecessors(node))
+        if len(list_predecessors) > 1:
+            for node_anc_i,node_anc_j in combinations(list_predecessors, 2):
+               node_ancestor = nx.lowest_common_ancestor(graph, node_anc_i, node_anc_j)
+               if node_ancestor:
+                bubble = True
+                break
+            if bubble:
+                graph = simplify_bubbles(solve_bubble(graph, node_ancestor, node))
+                break
+    return graph
+
 
 def solve_entry_tips(graph, starting_nodes):
-    pass
+    path_l = []
+    path_len = []
+    path_weight = []
+    for node in starting_nodes:
+        for des_node in nx.descendants(graph, node):
+            pred_node = list(graph.predecessors(des_node))
+            if len(pred_node) >= 2:
+                for path in nx.all_simple_paths(graph, node, des_node):
+                    path_l.append(path)
+                    path_len.append(len(path))
+                    path_weight.append(path_average_weight(graph, path))
+    graphe = select_best_path(graph, path_l, path_len, path_weight, True, False)
+
+    return graphe
 
 def solve_out_tips(graph, ending_nodes):
     pass
@@ -225,18 +254,38 @@ def main():
     Main program function
     """
     # Get arguments
+
     args = get_arguments()
+    # Lecture du fichier et construction du graphe
+    dico = build_kmer_dict(fastq_file = args.fastq_file, kmer_size = args.kmer_size)
+    graph = build_graph(dico)
+    
+    # Résolution des bulles
+    graph = simplify_bubbles(graph)
+    
+    # Résolution des pointes d’entrée et de sortie
+    starting_nodes = get_starting_nodes(graph)
+    ending_nodes = get_sink_nodes(graph)
+    graph = solve_entry_tips(graph, starting_nodes)
+    graph = solve_out_tips(graph, ending_nodes)
+    
+    # Ecriture du/des contigs 
+    contigs = get_contigs(graph, starting_nodes, ending_nodes)
+    save_contigs(contigs, args.output_file)
 
     # Fonctions de dessin du graphe
     # A decommenter si vous souhaitez visualiser un petit 
     # graphe
     # Plot the graph
-    # if args.graphimg_file:
-    #     draw_graph(graph, args.graphimg_file)
+    if args.graphimg_file:
+        draw_graph(graph, args.graphimg_file)
     # Save the graph in file
-    # if args.graph_file:
-    #     save_graph(graph, args.graph_file)
+    if args.graph_file:
+        save_graph(graph, args.graph_file)
 
 
 if __name__ == '__main__':
     main()
+    
+    
+
