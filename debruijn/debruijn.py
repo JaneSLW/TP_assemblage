@@ -113,29 +113,30 @@ def remove_paths(graph, path_list, delete_entry_node, delete_sink_node):
     return graph
 
 def std(data):
-    return statistics.stdev(data)
+    return statistics.stdev([i for i in data])
 
 
 def select_best_path(graph, path_list, path_length, weight_avg_list, 
                      delete_entry_node=False, delete_sink_node=False):
-    if statistics.stdev(weight_avg_list) != 0 :
-        path_to_keep = weight_avg_list.index(max(weight_avg_list))
+    if len(path_list) > 1 : 
+        if std([i for i in weight_avg_list]) != 0 :
+            path_to_keep = weight_avg_list.index(max(weight_avg_list))
     
-    elif statistics.stdev(path_length) != 0 :
-        path_to_keep = path_length.index(max(path_length))
-    
-    else : 
-        path_to_keep = randint(0, len(path_list))
-    
-    path_l = list(path_list)
-    path_l.pop(path_to_keep)
+        elif std([i for i in path_length]) != 0 :
+            path_to_keep = path_length.index(max(path_length))
+        
+        else : 
+            path_to_keep = randint(0, len(path_list))
+        
+        path_l = list(path_list)
+        path_l.pop(path_to_keep)
 
-    G = remove_paths(graph, path_l, delete_entry_node, delete_sink_node)
+        graph = remove_paths(graph, path_l, delete_entry_node, delete_sink_node)
 
-    return G
+    return graph
 
 def path_average_weight(graph, path):
-    return(statistics.mean([d["weight"] for (u, v, d) in graph.subgraph(path).edges(data=True)]))
+    return statistics.mean([d["weight"] for (u, v, d) in graph.subgraph(path).edges(data=True)])
 
 def solve_bubble(graph, ancestor_node, descendant_node):
     paths = list(nx.all_simple_paths(graph, ancestor_node, descendant_node))
@@ -290,13 +291,11 @@ def main():
     # Plot the graph
     if args.graphimg_file:
         draw_graph(graph, args.graphimg_file)
+        save_graph(graph, args.graphimg_file)
     # Save the graph in file
-    if args.graph_file:
-        save_graph(graph, args.graph_file)
+    #if args.graph_file:
+    #    
 
 
 if __name__ == '__main__':
     main()
-    
-    
-
